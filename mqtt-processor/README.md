@@ -68,6 +68,22 @@ Remote deploy from laptop/workstation:
 bash scripts/deploy_remote.sh user@pi-host
 ```
 
+Environment file setup (recommended):
+
+```bash
+mkdir -p config
+cat > config/garden-telemetry.env <<'EOF'
+MQTT_BROKER=localhost
+MQTT_PORT=1883
+MQTT_TOPIC=msh/+/json/#
+PROMETHEUS_PORT=8000
+EOF
+```
+
+`scripts/deploy_remote.sh` checks for `config/garden-telemetry.env` and, if present, copies it to `~/.config/garden-telemetry.env` on the remote host. The user service reads this file via `EnvironmentFile=%h/.config/garden-telemetry.env`.
+
+This config file is intentionally git-ignored and should not be committed.
+
 Update in place on target machine:
 
 ```bash

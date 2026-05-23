@@ -25,15 +25,29 @@ fi
 echo "Creating remote app directory: $REMOTE_APP_DIR"
 ssh -p "$SSH_PORT" "$REMOTE_HOST" "mkdir -p $REMOTE_APP_DIR"
 
+REMOTE_ENV_FILE="~/.config/garden-telemetry.env"
+LOCAL_ENV_FILE="$LOCAL_APP_DIR/config/garden-telemetry.env"
+
 echo "Syncing app to $REMOTE_HOST:$REMOTE_APP_DIR"
 rsync -az --delete \
   --exclude '.git' \
   --exclude '.venv' \
   --exclude '__pycache__' \
   --exclude '*.pyc' \
+  --exclude 'tests/' \
+  --exclude '.pytest_cache/' \
+  --exclude 'pytest.ini' \
+  --exclude 'requirements-dev.txt' \
+  --exclude 'config/garden-telemetry.env' \
   --exclude '.env' \
   -e "ssh -p $SSH_PORT" \
   "$LOCAL_APP_DIR/" "$REMOTE_HOST:$REMOTE_APP_DIR/"
+
+if [[ -f "$LOCAL_ENV_FILE" ]]; then
+  echo "Copying optional env file to $REMOTE_HOST:$REMOTE_ENV_FILE"
+  ssh -p "$SSH_PORT" "$REMOTE_HOST" "mkdir -p ~/.config"
+  scp -P "$SSH_PORT" "$LOCAL_ENV_FILE" "$REMOTE_HOST:$REMOTE_ENV_FILE"
+fi
 
 echo "Running remote deploy script"
 ssh -p "$SSH_PORT" "$REMOTE_HOST" "bash $REMOTE_APP_DIR/scripts/deploy.sh"

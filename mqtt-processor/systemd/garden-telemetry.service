@@ -6,6 +6,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory={{APP_DIR}}
+EnvironmentFile=%h/.config/garden-telemetry.env
 ExecStart={{VENV_PYTHON}} {{APP_PY}}
 Restart=always
 RestartSec=5

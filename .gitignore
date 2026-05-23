@@ -5,3 +5,6 @@ mqtt-processor/bridge.pid
 aws/dist/
 aws/
 awscliv2.zip
+
+**/*.env
+mqtt-processor/config/garden-telemetry.env
