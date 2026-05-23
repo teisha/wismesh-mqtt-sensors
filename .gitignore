@@ -3,3 +3,5 @@ mqtt-processor/.venv/
 mqtt-processor/bridge.log
 mqtt-processor/bridge.pid
 aws/dist/
+aws/
+awscliv2.zip
