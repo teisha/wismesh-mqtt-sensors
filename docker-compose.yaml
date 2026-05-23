@@ -1,0 +1,42 @@
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    container_name: mosquitto
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+    restart: always
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      # THIS ROUTES YOUR DATA STREAMS TO AN M.2 SSD:
+      # Steps were:
+      # sudo mount /dev/sda2 /mnt/storage
+      # sudo mkdir -p /mnt/storage/prometheus_data
+      # sudo chown -R 65534:65534 /mnt/storage/prometheus_data
+      - /mnt/storage/prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=365d' # Keeps a full rolling year of garden metrics!
+    ports:
+      - "9090:9090"
+    network_mode: "host"
+    restart: always
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    restart: always
+    volumes:
+      # Mount your local provisioning folder configuration
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      # Mount the directory where your actual dashboard JSON files live
+      - ./grafana/dashboards:/var/lib/grafana/dashboards

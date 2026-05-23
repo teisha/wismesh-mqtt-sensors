@@ -1,0 +1,4 @@
+boto3
+paho-mqtt
+prometheus-client
+python-dotenv

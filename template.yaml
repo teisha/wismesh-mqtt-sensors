@@ -1,0 +1,241 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  Stage:
+    Type: String
+    Default: dev
+    Description: The stage of the application (e.g., dev, prod)
+  EcrRepoName:
+    Type: String
+    Default: s3-events
+    Description: The name of the project
+  Region:
+    Type: String
+    Default: us-east-1
+    Description: The AWS region to deploy the resources
+  BucketName:
+    Type: String
+    Default: serverless-tdb-app-dev-clienthostbucket-1sr8hxithgtfg
+    Description: The name of the S3 bucket to monitor for events
+  PiIamUserName:
+    Type: String
+    Default: raspi-garden-bridge
+    Description: IAM user allowed to assume the Raspberry Pi bridge role
+
+Resources:
+  GardenTelemetryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      # DeletionPolicy: Retain
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: search_attribute
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: SK
+              KeyType: HASH
+            - AttributeName: PK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: SearchIndex
+          KeySchema:
+            - AttributeName: search_attribute
+              KeyType: HASH
+            - AttributeName: PK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  RaspberryPiBridgeManagedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub ${Stage}-garden-telemetry-bridge-policy
+      Description: !Sub DynamoDB access for Raspberry Pi bridge in ${Stage}
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:GetItem
+              - dynamodb:UpdateItem
+              - dynamodb:DeleteItem
+              - dynamodb:Query
+              - dynamodb:DescribeTable
+            Resource:
+              - !GetAtt GardenTelemetryTable.Arn
+              - !Sub ${GardenTelemetryTable.Arn}/index/*
+
+  RaspberryPiBridgeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${Stage}-garden-telemetry-bridge-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:user/${PiIamUserName}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref RaspberryPiBridgeManagedPolicy
+
+  # OutputTable:
+  #   Type: AWS::DynamoDB::Table
+  #   Properties:
+  #     # DeletionPolicy: Retain
+  #     AttributeDefinitions:
+  #       - AttributeName: PK
+  #         AttributeType: S
+  #       - AttributeName: SK
+  #         AttributeType: S
+  #       - AttributeName: search_attribute
+  #         AttributeType: S
+  #     KeySchema:
+  #       - AttributeName: PK
+  #         KeyType: HASH
+  #       - AttributeName: SK
+  #         KeyType: RANGE
+  #     BillingMode: PAY_PER_REQUEST
+  #     GlobalSecondaryIndexes:
+  #       - IndexName: GSI1
+  #         KeySchema:
+  #           - AttributeName: SK
+  #             KeyType: HASH
+  #           - AttributeName: PK
+  #             KeyType: RANGE
+  #         Projection:
+  #           ProjectionType: ALL
+  #       - IndexName: SearchIndex
+  #         KeySchema:
+  #           - AttributeName: search_attribute
+  #             KeyType: HASH
+  #           - AttributeName: PK
+  #             KeyType: RANGE
+  #         Projection:
+  #           ProjectionType: ALL
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaS3AccessPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub arn:aws:s3:::2u-import
+                  - !Sub arn:aws:s3:::2u-import/partner/imports/*
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - events:PutEvents
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:ListBucket
+                  - s3:GetObject
+                Resource:
+                  - !Sub arn:aws:s3:::${BucketName}
+                  - !Sub arn:aws:s3:::${BucketName}/*
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                Resource: 
+                  - !GetAtt GardenTelemetryTable.Arn
+                  - !Sub ${GardenTelemetryTable.Arn}/*
+                  # - !GetAtt OutputTable.Arn
+                  # - !Sub ${OutputTable.Arn}/*                
+
+  # LambdaFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     Description: !Sub "Lambda function to process S3 events - sam deploy"
+  #     Architectures:
+  #       - x86_64
+  #     CodeUri: src
+  #     Handler: app.file_event_handler
+  #     Role: !GetAtt LambdaExecutionRole.Arn
+  #     Runtime: python3.12
+  #     Timeout: 30
+  #     Environment:
+  #       Variables:
+  #         BUCKET_NAME: !Ref BucketName
+  #         METADATA_TABLE_NAME: !Ref MetadataTable
+  #         OUTPUT_TABLE_NAME: !Ref OutputTable
+  #         REGION: !Ref AWS::Region
+  #         STAGE: !Ref Stage
+  #         KEY_PREFIX: !Sub "${Stage}/sis/import/"
+
+  # LambdaFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     Description: !Sub "Lambda function to process S3 events - container deploy"
+  #     Architectures:
+  #       - x86_64
+  #     PackageType: Image
+  #     ImageUri: !Sub ${AWS::AccountId}.dkr.ecr.${Region}.amazonaws.com/${Stage}/${EcrRepoName}:latest
+  #     Role: !GetAtt LambdaExecutionRole.Arn
+  #     Timeout: 30
+  #     Environment:
+  #       Variables:
+  #         TABLE_NAME: !Ref MetadataTable
+  #         REGION: !Ref AWS::Region 
+
+  # LambdaPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     FunctionName: !GetAtt LambdaFunction.Arn
+  #     Action: lambda:InvokeFunction
+  #     Principal: events.amazonaws.com
+
+Outputs:
+  GardenTelemetryTableName:
+    Description: The name of the DynamoDB table that holds metadata and configs
+    Value: !Ref GardenTelemetryTable
+  # OutputTableName:
+  #   Description: The name of the DynamoDB table that holds data related to job outputs
+  #   Value: !Ref OutputTable    
+  LambdaExecutionRoleArn:
+    Description: The ARN of the Lambda execution role
+    Value: !GetAtt LambdaExecutionRole.Arn
+  RaspberryPiBridgeManagedPolicyArn:
+    Description: Managed policy ARN for Raspberry Pi bridge access
+    Value: !Ref RaspberryPiBridgeManagedPolicy
+  RaspberryPiBridgeRoleArn:
+    Description: IAM role ARN for Raspberry Pi bridge
+    Value: !GetAtt RaspberryPiBridgeRole.Arn
