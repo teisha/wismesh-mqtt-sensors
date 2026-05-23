@@ -2,3 +2,4 @@ mqtt-processor/.env
 mqtt-processor/.venv/
 mqtt-processor/bridge.log
 mqtt-processor/bridge.pid
+aws/dist/

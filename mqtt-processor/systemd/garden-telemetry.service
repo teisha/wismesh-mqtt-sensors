@@ -1,0 +1,14 @@
+[Unit]
+Description=Garden telemetry MQTT bridge
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory={{APP_DIR}}
+ExecStart={{VENV_PYTHON}} {{APP_PY}}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
