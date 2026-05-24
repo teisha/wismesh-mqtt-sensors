@@ -1,0 +1,18 @@
+[Unit]
+Description=Garden telemetry Docker Compose stack
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User={{SERVICE_USER}}
+Group={{SERVICE_GROUP}}
+WorkingDirectory={{STACK_DIR}}
+ExecStart=/usr/bin/docker compose -f {{STACK_DIR}}/docker-compose.yaml --project-directory {{STACK_DIR}} up -d
+ExecStop=/usr/bin/docker compose -f {{STACK_DIR}}/docker-compose.yaml --project-directory {{STACK_DIR}} down
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

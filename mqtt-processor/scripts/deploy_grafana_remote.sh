@@ -61,7 +61,9 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-REMOTE_STACK_DIR="~/telemetry"
+REMOTE_HOME=""
+REMOTE_STACK_DIR=""
+COMPOSE_SERVICE_NAME="garden-telemetry-compose.service"
 
 # Keep ControlPath short enough for Unix domain socket limits.
 CONTROL_ID="$(printf '%s:%s:%s' "$REMOTE_HOST" "$SSH_PORT" "$USER" | sha1sum | cut -c1-10)"
@@ -90,6 +92,9 @@ fi
 echo "Opening shared SSH connection (you should authenticate once)"
 ssh "${SSH_OPTS[@]}" "$REMOTE_HOST" -Nf
 
+REMOTE_HOME="$(ssh "${SSH_OPTS[@]}" "$REMOTE_HOST" 'printf %s "$HOME"')"
+REMOTE_STACK_DIR="$REMOTE_HOME/telemetry"
+
 echo "Ensuring remote stack directories exist"
 ssh "${SSH_OPTS[@]}" "$REMOTE_HOST" "mkdir -p $REMOTE_STACK_DIR/grafana/provisioning $REMOTE_STACK_DIR/grafana/dashboards $REMOTE_STACK_DIR/telemetry"
 
@@ -113,15 +118,43 @@ rsync -az "${RSYNC_DELETE_OPTS[@]}" \
 
 echo "Ensuring persistent Grafana data directory permissions on remote host"
 ssh "${SSH_OPTS[@]}" "$REMOTE_HOST" '
-  sudo mkdir -p /mnt/storage/grafana_data
-  current_owner="$(sudo stat -c '%u:%g' /mnt/storage/grafana_data 2>/dev/null || echo unknown)"
-  if [ "$current_owner" != "472:472" ]; then
-    sudo chown -R 472:472 /mnt/storage/grafana_data
+  if sudo -n true >/dev/null 2>&1; then
+    sudo mkdir -p /mnt/storage/grafana_data
+    current_owner="$(sudo stat -c "%u:%g" /mnt/storage/grafana_data 2>/dev/null || echo unknown)"
+    if [ "$current_owner" != "472:472" ]; then
+      sudo chown -R 472:472 /mnt/storage/grafana_data
+    fi
+  elif [ -d /mnt/storage/grafana_data ] && [ -w /mnt/storage/grafana_data ]; then
+    current_owner="$(stat -c "%u:%g" /mnt/storage/grafana_data 2>/dev/null || echo unknown)"
+    if [ "$current_owner" != "472:472" ]; then
+      chown -R 472:472 /mnt/storage/grafana_data >/dev/null 2>&1 || true
+    fi
+  else
+    echo "Warning: skipping /mnt/storage/grafana_data permission fix (sudo password required)."
+    echo "Warning: run manually once: sudo mkdir -p /mnt/storage/grafana_data && sudo chown -R 472:472 /mnt/storage/grafana_data"
   fi
 '
 
-echo "Updating Grafana service on remote host"
-ssh -tt "${SSH_OPTS[@]}" "$REMOTE_HOST" "cd $REMOTE_STACK_DIR && docker compose up -d grafana && docker compose restart grafana"
+echo "Restarting telemetry compose stack on remote host"
+ssh -tt "${SSH_OPTS[@]}" "$REMOTE_HOST" "
+  set -euo pipefail
+  if sudo systemctl list-unit-files --type=service | grep -q '^$COMPOSE_SERVICE_NAME'; then
+    sudo systemctl restart $COMPOSE_SERVICE_NAME
+  else
+    echo 'Compose systemd service not found; running docker compose up -d fallback.'
+    cd $REMOTE_STACK_DIR && docker compose up -d
+  fi
+"
+
+echo "Verifying compose service state"
+ssh "${SSH_OPTS[@]}" "$REMOTE_HOST" "
+  echo 'Compose service enabled:'
+  sudo systemctl is-enabled $COMPOSE_SERVICE_NAME || true
+  echo 'Compose service active:'
+  sudo systemctl is-active $COMPOSE_SERVICE_NAME || true
+  echo 'Compose services:'
+  cd $REMOTE_STACK_DIR && docker compose ps
+"
 
 echo "Verifying Grafana provisioning files in container"
 ssh "${SSH_OPTS[@]}" "$REMOTE_HOST" "cd $REMOTE_STACK_DIR && docker compose exec -T grafana sh -lc 'ls -1 /etc/grafana/provisioning/datasources && ls -1 /etc/grafana/provisioning/dashboards && ls -1 /var/lib/grafana/dashboards'"
