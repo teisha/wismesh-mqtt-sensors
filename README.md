@@ -42,6 +42,12 @@ cd /home/teisha/git/wismesh-mqtt-sensors
 docker compose up -d grafana
 ```
 
+Deploy compose + telemetry + Grafana files to the Pi and recreate Grafana:
+```
+cd /home/teisha/git/wismesh-mqtt-sensors/mqtt-processor
+./scripts/deploy_grafana_remote.sh pi@raspberrypi.local
+```
+
 
 
 
