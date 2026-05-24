@@ -80,62 +80,9 @@ echo "Running remote deploy script"
 ssh -tt "${SSH_OPTS[@]}" "$REMOTE_HOST" "bash $REMOTE_APP_DIR/scripts/deploy.sh"
 
 echo "Ensuring docker compose stack service is installed and enabled"
-ssh -tt "${SSH_OPTS[@]}" "$REMOTE_HOST" '
-  set -euo pipefail
-  REMOTE_HOME="$(printf %s "$HOME")"
-  REMOTE_APP_DIR="$REMOTE_HOME/mqtt-processor"
-  REMOTE_STACK_DIR="$REMOTE_HOME/telemetry"
-  SERVICE_TEMPLATE="$REMOTE_APP_DIR/systemd/'"$COMPOSE_SERVICE_NAME"'"
-  TMP_SERVICE_FILE="$(mktemp)"
-
-  cleanup() {
-    rm -f "$TMP_SERVICE_FILE"
-  }
-  trap cleanup EXIT
-
-  if [[ ! -f "$REMOTE_STACK_DIR/docker-compose.yaml" ]]; then
-    echo "Skipping compose service setup: $REMOTE_STACK_DIR/docker-compose.yaml not found"
-    exit 0
-  fi
-
-  if [[ ! -f "$SERVICE_TEMPLATE" ]]; then
-    echo "Error: compose systemd template not found at $SERVICE_TEMPLATE"
-    exit 1
-  fi
-
-  sed \
-    -e "s|{{STACK_DIR}}|$REMOTE_STACK_DIR|g" \
-    -e "s|{{SERVICE_USER}}|$(id -un)|g" \
-    -e "s|{{SERVICE_GROUP}}|$(id -gn)|g" \
-    "$SERVICE_TEMPLATE" > "$TMP_SERVICE_FILE"
-
-  sudo systemctl enable docker
-  sudo install -m 0644 "$TMP_SERVICE_FILE" /etc/systemd/system/'"$COMPOSE_SERVICE_NAME"'
-  sudo systemctl daemon-reload
-  sudo systemctl enable --now '"$COMPOSE_SERVICE_NAME"'
-  sudo systemctl restart '"$COMPOSE_SERVICE_NAME"'
-'
+ssh -tt "${SSH_OPTS[@]}" "$REMOTE_HOST" "bash $REMOTE_APP_DIR/scripts/remote_setup_compose_service.sh $COMPOSE_SERVICE_NAME"
 
 echo "Verifying remote system service"
-ssh "${SSH_OPTS[@]}" "$REMOTE_HOST" '
-  echo "Unit file:";
-  sudo ls -l /etc/systemd/system/garden-telemetry.service;
-  echo "Enabled:";
-  sudo systemctl is-enabled garden-telemetry.service || true;
-  echo "Active:";
-  sudo systemctl is-active garden-telemetry.service || true
-'
-
-echo "Verifying compose stack service"
-ssh "${SSH_OPTS[@]}" "$REMOTE_HOST" '
-  echo "Compose service enabled:";
-  sudo systemctl is-enabled '"$COMPOSE_SERVICE_NAME"' || true;
-  echo "Compose service active:";
-  sudo systemctl is-active '"$COMPOSE_SERVICE_NAME"' || true;
-  echo "Compose containers:";
-  if [ -d ~/telemetry ]; then
-    cd ~/telemetry && docker compose ps || true;
-  fi
-'
+ssh "${SSH_OPTS[@]}" "$REMOTE_HOST" "bash $REMOTE_APP_DIR/scripts/remote_verify_services.sh $COMPOSE_SERVICE_NAME"
 
 echo "Remote deploy complete: $REMOTE_HOST:$REMOTE_APP_DIR"

@@ -60,6 +60,12 @@ This will tail the mosquitto logs:
 docker exec -it mosquitto mosquitto_sub -h localhost -t "#" -v
 ```
 
+### Why does 'docker compose ps' show this service restarting?
+This shows the logs:
+```
+docker compose logs grafana --tail=120
+```
+
 ### Are the messages being saved in Prometheus
 Query one of the data points that you set up in your code:
 ```

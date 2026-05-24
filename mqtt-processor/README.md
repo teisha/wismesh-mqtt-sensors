@@ -16,6 +16,7 @@ MQTT-to-metrics bridge for WisMesh telemetry.
 - `scripts/deploy_remote.sh`: rsync to Pi and invoke remote deploy script.
 - `scripts/update_app.sh`: pull latest code, refresh deps, restart service.
 - `systemd/garden-telemetry.service`: service template used by deploy script.
+- `systemd/garden-telemetry-compose.service`: systemd template for the Docker Compose stack.
 
 ## Execution Flow
 
@@ -68,6 +69,8 @@ Remote deploy from laptop/workstation:
 bash scripts/deploy_remote.sh user@pi-host
 ```
 
+That deploy path installs the Python app service and also renders/installs the Docker Compose boot unit from `systemd/garden-telemetry-compose.service`, so the container stack comes back after reboot or power loss.
+
 Environment file setup (recommended):
 
 ```bash
@@ -81,6 +84,8 @@ EOF
 ```
 
 `scripts/deploy_remote.sh` checks for `config/garden-telemetry.env` and, if present, copies it to `~/.config/garden-telemetry.env` on the remote host. Deploy then installs it to `/etc/default/garden-telemetry`, which is read by the system service.
+
+`scripts/deploy_grafana_remote.sh` is for updating the compose stack in place on the remote host. It syncs the Grafana and telemetry files, then restarts the existing compose systemd service instead of creating a new one.
 
 This config file is intentionally git-ignored and should not be committed.
 
@@ -112,3 +117,17 @@ sudo systemctl restart garden-telemetry.service
 The deploy script already templates this path from:
 
 - `scripts/deploy.sh` replacing `{{APP_PY}}`.
+
+## Compose Service Adjustment
+
+The Docker Compose stack is managed by `garden-telemetry-compose.service`, rendered from `systemd/garden-telemetry-compose.service` during `scripts/deploy_remote.sh`.
+
+If you change the stack location, update the template and re-run the remote deploy so the installed unit is regenerated.
+
+To inspect it on the target host:
+
+```bash
+sudo systemctl status garden-telemetry-compose.service
+sudo systemctl restart garden-telemetry-compose.service
+docker compose -f ~/telemetry/docker-compose.yaml ps
+```
