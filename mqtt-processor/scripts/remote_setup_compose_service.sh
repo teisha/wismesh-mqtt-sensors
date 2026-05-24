@@ -76,5 +76,18 @@ sed \
 sudo systemctl enable docker
 sudo install -m 0644 "$TMP_SERVICE_FILE" "/etc/systemd/system/$COMPOSE_SERVICE_NAME"
 sudo systemctl daemon-reload
-sudo systemctl enable --now "$COMPOSE_SERVICE_NAME"
-sudo systemctl restart "$COMPOSE_SERVICE_NAME"
+if ! sudo systemctl enable --now "$COMPOSE_SERVICE_NAME"; then
+  echo "Error: failed to start $COMPOSE_SERVICE_NAME"
+  echo "Recent unit logs:"
+  sudo journalctl -u "$COMPOSE_SERVICE_NAME" -n 80 --no-pager || true
+  echo "Mount status:"
+  findmnt -T /mnt/storage || true
+  echo "Hint: check /etc/fstab UUID and device availability"
+  exit 1
+fi
+
+if ! sudo systemctl restart "$COMPOSE_SERVICE_NAME"; then
+  echo "Error: failed to restart $COMPOSE_SERVICE_NAME"
+  sudo journalctl -u "$COMPOSE_SERVICE_NAME" -n 80 --no-pager || true
+  exit 1
+fi

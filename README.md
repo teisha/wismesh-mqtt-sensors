@@ -72,6 +72,14 @@ Query one of the data points that you set up in your code:
 curl -s "http://localhost:9090/api/v1/query?query=garden_temperature_celsius" | jq
 ```
 
+### Oy, just reboot this thing
+```
+sudo reboot
+```
+Alternative equivalent:
+```
+sudo systemctl reboot
+```
 
 ## References I used
 

@@ -3,7 +3,6 @@ Description=Garden telemetry Docker Compose stack
 After=docker.service network-online.target
 Requires=docker.service
 Wants=network-online.target
-RequiresMountsFor=/mnt/storage
 
 [Service]
 Type=oneshot
