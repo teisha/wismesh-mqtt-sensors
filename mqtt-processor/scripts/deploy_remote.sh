@@ -16,12 +16,13 @@ SSH_PORT="${2:-22}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOCAL_APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REMOTE_APP_DIR="~/mqtt-processor"
-CONTROL_DIR="$(mktemp -d)"
-CONTROL_PATH="$CONTROL_DIR/ssh_mux_%h_%p_%r"
+# Keep ControlPath short enough for Unix domain socket limits.
+CONTROL_ID="$(printf '%s:%s:%s' "$REMOTE_HOST" "$SSH_PORT" "$USER" | sha1sum | cut -c1-10)"
+CONTROL_PATH="/tmp/ssh_mux_${CONTROL_ID}_${$}"
 
 cleanup() {
   ssh -p "$SSH_PORT" -o ControlPath="$CONTROL_PATH" -O exit "$REMOTE_HOST" >/dev/null 2>&1 || true
-  rm -rf "$CONTROL_DIR"
+  rm -f "$CONTROL_PATH"
 }
 trap cleanup EXIT
 
