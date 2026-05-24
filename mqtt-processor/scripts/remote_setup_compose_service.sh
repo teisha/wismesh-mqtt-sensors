@@ -28,7 +28,13 @@ if [[ ! -f "$SERVICE_TEMPLATE" ]]; then
   exit 1
 fi
 
-if mountpoint -q /mnt/storage; then
+is_storage_mounted() {
+  local target
+  target="$(readlink -f /mnt/storage 2>/dev/null || printf %s /mnt/storage)"
+  findmnt -T "$target" >/dev/null 2>&1
+}
+
+if is_storage_mounted; then
   echo "Detected /mnt/storage mount; preparing Grafana and Prometheus data directories"
   sudo install -d -m 0775 -o 472 -g 472 /mnt/storage/grafana_data
   sudo install -d -m 0775 -o 65534 -g 65534 /mnt/storage/prometheus_data
@@ -43,7 +49,7 @@ else
   sudo systemctl start mnt-storage.mount >/dev/null 2>&1 || true
   sudo systemctl start mnt-storage.automount >/dev/null 2>&1 || true
 
-  if mountpoint -q /mnt/storage; then
+  if is_storage_mounted; then
     echo "Detected /mnt/storage mount after activation; preparing directories"
     sudo install -d -m 0775 -o 472 -g 472 /mnt/storage/grafana_data
     sudo install -d -m 0775 -o 65534 -g 65534 /mnt/storage/prometheus_data
