@@ -40,3 +40,7 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning
       # Mount the directory where your actual dashboard JSON files live
       - ./grafana/dashboards:/var/lib/grafana/dashboards
+
+
+# scp /Users/teishadalton-buford/git/wismesh-mqtt-sensors/docker-compose.yaml pi@raspberrypi.local:~/telemetry/docker-compose.yaml
+# rsync -av --progress /Users/teishadalton-buford/git/wismesh-mqtt-sensors/docker-compose.yaml pi@raspberrypi.local:~/telemetry/docker-compose.yaml
