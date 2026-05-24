@@ -44,3 +44,6 @@ services:
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
       # Persist Grafana SQLite DB, users, alerts, and runtime state.
       - /mnt/storage/grafana_data:/var/lib/grafana
+
+    # scp /Users/teishadalton-buford/git/wismesh-mqtt-sensors/docker-compose.yaml pi@raspberrypi.local:~/telemetry/docker-compose.yaml
+    # rsync -av --progress /Users/teishadalton-buford/git/wismesh-mqtt-sensors/docker-compose.yaml pi@raspberrypi.local:~/telemetry/docker-compose.yaml
