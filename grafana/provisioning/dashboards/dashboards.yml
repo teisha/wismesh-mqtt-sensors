@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: Secret Garden
+    orgId: 1
+    folder: Garden
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards
