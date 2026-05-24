@@ -121,7 +121,10 @@ ssh "${SSH_OPTS[@]}" "$REMOTE_HOST" '
 '
 
 echo "Updating Grafana service on remote host"
-ssh -tt "${SSH_OPTS[@]}" "$REMOTE_HOST" "cd $REMOTE_STACK_DIR && docker compose up -d grafana"
+ssh -tt "${SSH_OPTS[@]}" "$REMOTE_HOST" "cd $REMOTE_STACK_DIR && docker compose up -d grafana && docker compose restart grafana"
+
+echo "Verifying Grafana provisioning files in container"
+ssh "${SSH_OPTS[@]}" "$REMOTE_HOST" "cd $REMOTE_STACK_DIR && docker compose exec -T grafana sh -lc 'ls -1 /etc/grafana/provisioning/datasources && ls -1 /etc/grafana/provisioning/dashboards && ls -1 /var/lib/grafana/dashboards'"
 
 echo "Grafana deploy complete. Recent logs:"
 ssh "${SSH_OPTS[@]}" "$REMOTE_HOST" "cd $REMOTE_STACK_DIR && docker compose logs grafana --tail=60"
