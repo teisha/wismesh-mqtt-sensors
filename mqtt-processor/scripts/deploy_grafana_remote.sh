@@ -11,20 +11,30 @@ if [[ $# -lt 1 ]]; then
   exit 1
 fi
 
-REMOTE_HOST="$1"
+REMOTE_HOST=""
 SSH_PORT="22"
 NO_DELETE=0
 PORT_SET=0
+HOST_SET=0
 
-for arg in "${@:2}"; do
+for arg in "$@"; do
   case "$arg" in
     --no-delete)
       NO_DELETE=1
       ;;
-    ''|*[!0-9]*)
-      echo "Error: unrecognized argument '$arg'"
+    --*)
+      echo "Error: unrecognized flag '$arg'"
       echo "Usage: $0 <user@pi-host> [ssh_port] [--no-delete]"
       exit 1
+      ;;
+    ''|*[!0-9]*)
+      if [[ $HOST_SET -eq 1 ]]; then
+        echo "Error: multiple host values provided ('$REMOTE_HOST' and '$arg')"
+        echo "Usage: $0 <user@pi-host> [ssh_port] [--no-delete]"
+        exit 1
+      fi
+      REMOTE_HOST="$arg"
+      HOST_SET=1
       ;;
     *)
       if [[ $PORT_SET -eq 1 ]]; then
@@ -37,6 +47,12 @@ for arg in "${@:2}"; do
       ;;
   esac
 done
+
+if [[ $HOST_SET -eq 0 ]]; then
+  echo "Error: missing <user@pi-host>"
+  echo "Usage: $0 <user@pi-host> [ssh_port] [--no-delete]"
+  exit 1
+fi
 
 RSYNC_DELETE_OPTS=(--delete)
 if [[ $NO_DELETE -eq 1 ]]; then
