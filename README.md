@@ -22,7 +22,7 @@ deploy_remote.sh pi@raspberrypi.local
 ```
 Verify on Pi:
 ```
-systemctl --user status garden-telemetry.service
+sudo systemctl status garden-telemetry.service
 ```
 
 

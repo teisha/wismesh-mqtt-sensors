@@ -12,7 +12,7 @@ MQTT-to-metrics bridge for WisMesh telemetry.
 - `requirements.txt`: runtime dependencies for deployment.
 - `requirements-dev.txt`: local development/testing dependencies.
 - `pytest.ini`: pytest discovery/config.
-- `scripts/deploy.sh`: local deploy to systemd user service.
+- `scripts/deploy.sh`: local deploy to system-level systemd service.
 - `scripts/deploy_remote.sh`: rsync to Pi and invoke remote deploy script.
 - `scripts/update_app.sh`: pull latest code, refresh deps, restart service.
 - `systemd/garden-telemetry.service`: service template used by deploy script.
@@ -80,7 +80,7 @@ PROMETHEUS_PORT=8000
 EOF
 ```
 
-`scripts/deploy_remote.sh` checks for `config/garden-telemetry.env` and, if present, copies it to `~/.config/garden-telemetry.env` on the remote host. The user service reads this file via `EnvironmentFile=%h/.config/garden-telemetry.env`.
+`scripts/deploy_remote.sh` checks for `config/garden-telemetry.env` and, if present, copies it to `~/.config/garden-telemetry.env` on the remote host. Deploy then installs it to `/etc/default/garden-telemetry`, which is read by the system service.
 
 This config file is intentionally git-ignored and should not be committed.
 
@@ -92,9 +92,9 @@ bash scripts/update_app.sh
 
 ## Service Path Adjustment
 
-If you move the executable again, update `ExecStart` in the rendered user service file:
+If you move the executable again, update `ExecStart` in the rendered system service file:
 
-- `~/.config/systemd/user/garden-telemetry.service`
+- `/etc/systemd/system/garden-telemetry.service`
 
 Expected command format:
 
@@ -105,8 +105,8 @@ ExecStart=/path/to/.venv/bin/python /path/to/mqtt-processor/src/app.py
 Then reload/restart:
 
 ```bash
-systemctl --user daemon-reload
-systemctl --user restart garden-telemetry.service
+sudo systemctl daemon-reload
+sudo systemctl restart garden-telemetry.service
 ```
 
 The deploy script already templates this path from:
