@@ -19,6 +19,10 @@ echo "Compose service enabled:"
 sudo systemctl is-enabled "$COMPOSE_SERVICE_NAME" || true
 echo "Compose service active:"
 sudo systemctl is-active "$COMPOSE_SERVICE_NAME" || true
+echo "Storage mount active:"
+mountpoint -q /mnt/storage && echo "/mnt/storage mounted" || echo "/mnt/storage NOT mounted"
+echo "Storage mount details:"
+findmnt /mnt/storage || true
 echo "Compose containers:"
 if [[ -d "$HOME/telemetry" ]]; then
   cd "$HOME/telemetry" && docker compose ps || true

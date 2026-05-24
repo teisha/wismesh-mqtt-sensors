@@ -33,7 +33,32 @@ if mountpoint -q /mnt/storage; then
   sudo install -d -m 0775 -o 472 -g 472 /mnt/storage/grafana_data
   sudo install -d -m 0775 -o 65534 -g 65534 /mnt/storage/prometheus_data
 else
-  echo "Warning: /mnt/storage is not mounted; skipping storage directory preparation"
+  echo "Storage mount not active yet; attempting to activate /mnt/storage"
+
+  # If fstab uses x-systemd.automount, touching the path can trigger the mount.
+  ls -A /mnt/storage >/dev/null 2>&1 || true
+
+  # Try explicit activation paths commonly used on Raspberry Pi hosts.
+  sudo mount /mnt/storage >/dev/null 2>&1 || true
+  sudo systemctl start mnt-storage.mount >/dev/null 2>&1 || true
+  sudo systemctl start mnt-storage.automount >/dev/null 2>&1 || true
+
+  if mountpoint -q /mnt/storage; then
+    echo "Detected /mnt/storage mount after activation; preparing directories"
+    sudo install -d -m 0775 -o 472 -g 472 /mnt/storage/grafana_data
+    sudo install -d -m 0775 -o 65534 -g 65534 /mnt/storage/prometheus_data
+  else
+    echo "Error: required mount /mnt/storage is still not active"
+    echo "This stack requires persistent storage for Grafana and Prometheus."
+    echo "Remote diagnostics:"
+    echo "  lsblk -f"
+    echo "  findmnt -T /mnt/storage"
+    echo "  grep -n /mnt/storage /etc/fstab"
+    echo "  sudo systemctl status mnt-storage.mount --no-pager"
+    echo "  sudo systemctl status mnt-storage.automount --no-pager"
+    echo "Fix the host mount, then re-run deploy."
+    exit 1
+  fi
 fi
 
 sed \
