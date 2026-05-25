@@ -1,8 +1,21 @@
 # Project to Connect WisMesh Sensors to Raspberry Pi running Grafana dashboard
 
+# Overview
+This project describes one person's journey to create a weather center for a backyard garden.
+
+I started this when I stumbled into Meshtastic as an off-grid communication method and thought it might be useful to set up, since this area is prone to hurricanes and bad weather.
+
+But then I saw that they have sensors ... hmmm!  This could be something!
+I will eventually be building this out to a full weather station with a rain gauge and wind speed tracker, but I am starting small - just temperature/humidity and barometric pressure
+
 ## Architecture
 
+### The start:
+- RAKwireless Mini Meshtastic Starter Kit US=915MHz RAK19003 + 4631
+- RAK Wireless RAK1901 Temperature and Humidity Sensor
+- RAK Wireless RAK1902 Barometric Pressure Sensor
 
+Instead of the Meshtastic starter kit, I found the little [PeakMesh MicroMAG](https://www.etsy.com/listing/4346022155/peakmesh-micromag-smallest-outdoor) solar powered unit with a slot C and slot D for the sensor, so this answered the power question as well as have a p.
 
 ## WisMesh Setup
 
