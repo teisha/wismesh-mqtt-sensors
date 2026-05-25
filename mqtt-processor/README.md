@@ -131,3 +131,23 @@ sudo systemctl status garden-telemetry-compose.service
 sudo systemctl restart garden-telemetry-compose.service
 docker compose -f ~/telemetry/docker-compose.yaml ps
 ```
+
+
+
+### Grafana dashboards from files
+
+Drop dashboard JSON files into `grafana/dashboards/`.
+
+The compose file mounts this folder read-only into Grafana at `/var/lib/grafana/dashboards`, and provisioning is configured to load dashboards from there.
+
+After adding or updating dashboard JSON files, refresh Grafana:
+```
+cd wismesh-mqtt-sensors
+docker compose up -d grafana
+```
+
+Deploy compose + telemetry + Grafana files to the Pi and recreate Grafana:
+```
+cd mqtt-processor
+./scripts/deploy_grafana_remote.sh pi@raspberrypi.local
+```
