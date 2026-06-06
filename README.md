@@ -15,11 +15,31 @@ I will eventually be building this out to a full weather station with a rain gau
 - RAK Wireless RAK1901 Temperature and Humidity Sensor
 - RAK Wireless RAK1902 Barometric Pressure Sensor
 
-Instead of the Meshtastic starter kit, I found the little [PeakMesh MicroMAG](https://www.etsy.com/listing/4346022155/peakmesh-micromag-smallest-outdoor) solar powered unit with a slot C and slot D for the sensor, so this answered the power question as well as have a p.
+Instead of the Meshtastic starter kit, I found the little [PeakMesh MicroMAG](https://www.etsy.com/listing/4346022155/peakmesh-micromag-smallest-outdoor) solar powered unit with a slot C and slot D for the sensor, so this answered the power question as well as "where am I going to put this node.
+
+The only issue with this starter kit is that the sensors sit on the back, which is facing up towards the solar panel.  I got the whole system set up and feeding my local grafana dashboard, but before I deploy this outside, I need to address the location of the sensors, the extreme Southern humidity and keeping the PCBs dry during flooding rains.   I've investigated that and will describe my weatherproofing solution below
 
 ## WisMesh Setup
 
+This part was a little more complex than I anticipated.
+Meshtastic is a really great communication network, and I really appreciate having the ability to slice out private channels and frequencies, and I am still working through the optimal settings on these.  Our local mesh looks like there are many nodes, but they are not very active. So I think I have room to "learn some lessons" here. 
 
+I have one Heltastic V3 (which includes Wifi) stationed inside the house, and my first node is my PeakMesh.  There will be more! 
+
+Heltastic V3:
+   LoRa / Region: US
+   LoRa / Ok to MQTT: true
+   LoRa / Transmit Enabled: true
+   Channels: 
+       0. Primary is still Longfast (I think this is wrong)
+       1. Secret Garden (private encrypted channel)
+   Device / Role: Client
+   
+
+
+PeakMesh:
+
+   Security / Managed Device: true
 
 ## Raspberry Pi Setup
 
@@ -44,6 +64,7 @@ sudo systemctl status garden-telemetry.service
 
 
 
+## Weatherproofing the outside deploy
 
 
 
