@@ -26,14 +26,26 @@ Meshtastic is a really great communication network, and I really appreciate havi
 
 I have one Heltastic V3 (which includes Wifi) stationed inside the house, and my first node is my PeakMesh.  There will be more! 
 
-Heltastic V3:
-   LoRa / Region: US
-   LoRa / Ok to MQTT: true
-   LoRa / Transmit Enabled: true
-   Channels: 
-       0. Primary is still Longfast (I think this is wrong)
-       1. Secret Garden (private encrypted channel)
-   Device / Role: Client
+Heltastic V3:  
+   - LoRa / Region: US  
+   - LoRa / Ok to MQTT: true  
+   - LoRa / Transmit Enabled: true  
+   - Channels:   
+       0. Primary is still Longfast (I think this is wrong)  
+       1. Secret Garden (private encrypted channel) 
+           - MQTT Uplink Enabled: true   
+   - Device / Role: Client  
+   - Network / Enabled: true
+   - Network / SSID: set up your local IOT wifi
+   - Network / Password: enter your password - password shows in plain text in app?!
+   - MQTT / Enabled: true  
+   - MQTT / JSON Enabled: true  
+   - MQTT / Root Topic: msh  (this just needs to match the topic used Python program processing messages)  
+   - MQTT / Server
+        - Address: (the IP address of yout MQTT broker server)
+        I'm using the default listener (1883) since it's all local, but will look at filling out the username / password / SSL features as I get more comfortable with the architecture.  No sense learning how to do a thing if you can't learn how to do it securely, but I don't know what I don't know just yet.
+
+
    
 
 
@@ -105,3 +117,9 @@ https://core-electronics.com.au/courses/meshtastic-for-makers-workshop/?fresh#KA
 
 https://www.youtube.com/watch?v=J4Z23yYmhvY&list=PLPK2l9Knytg6jzOfcqk5y0iBH48ZATVVD&index=7
 ```
+
+Look into this one for upgrading MQTT security
+```
+http://www.steves-internet-guide.com/mossquitto-conf-file/
+```
+
