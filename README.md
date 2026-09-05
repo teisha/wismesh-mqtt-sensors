@@ -6,7 +6,9 @@ This project describes one person's journey to create a weather center for a bac
 I started this when I stumbled into Meshtastic as an off-grid communication method and thought it might be useful to set up, since this area is prone to hurricanes and bad weather.
 
 But then I saw that they have sensors ... hmmm!  This could be something!
-I will eventually be building this out to a full weather station with a rain gauge and wind speed tracker, but I am starting small - just temperature/humidity and barometric pressure
+I will eventually be building this out to a full weather station with a rain gauge and wind speed tracker, but I am starting small - just temperature/humidity and barometric pressure.
+
+Going to try to document this so I know what I put together...
 
 ## Architecture
 
@@ -17,7 +19,7 @@ I will eventually be building this out to a full weather station with a rain gau
 
 Instead of the Meshtastic starter kit, I found the little [PeakMesh MicroMAG](https://www.etsy.com/listing/4346022155/peakmesh-micromag-smallest-outdoor) solar powered unit with a slot C and slot D for the sensor, so this answered the power question as well as "where am I going to put this node.
 
-The only issue with this starter kit is that the sensors sit on the back, which is facing up towards the solar panel.  I got the whole system set up and feeding my local grafana dashboard, but before I deploy this outside, I need to address the location of the sensors, the extreme Southern humidity and keeping the PCBs dry during flooding rains.   I've investigated that and will describe my weatherproofing solution below
+The only issue with this starter kit is that the sensors sit on the back, which is facing up towards the solar panel, so I had to buy some extension cables.  I got the whole system set up and feeding my local grafana dashboard, but before I deploy this outside, I need to address the location of the sensors, the extreme Southern humidity and keeping the PCBs dry during flooding rains.   I've investigated that and will describe my weatherproofing solution below
 
 ## WisMesh Setup
 
@@ -55,11 +57,16 @@ PeakMesh:
 
 ## Raspberry Pi Setup
 
+
+
+This was all my first time working with Raspberry Pi - so these are all bot first-pass code and I'm going to work on cleaning it up.
+
+Just testing it to see if it works:
 ```
 nohup python3 bridge.py > bridge.log 2>&1 &
 ```
 
-Next natural step:
+Next natural step - move it to a service:
 
 Run one end-to-end deploy from laptop:
 ```
