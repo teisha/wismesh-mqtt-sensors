@@ -92,7 +92,7 @@ sudo systemctl status garden-telemetry-compose.service
 The outdoor sensor node sends data over the private Secret Garden channel to the indoor Heltastic V3, which publishes MQTT messages to the shared broker on the Raspberry Pi. The Pi runs the MQTT broker and the garden-telemetry service, which decodes the JSON payloads and stores the resulting values in local Prometheus for 365 days while also sending them to AWS DynamoDB for long-term retention.
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph Outdoor["Outdoor / WisMesh network"]
         direction LR
         PM["PeakMesh\nClient Mute"]
@@ -111,7 +111,7 @@ flowchart LR
         HV["Heltastic V3\nWiFi + MQTT uplink"]
         MQTT["Mosquitto MQTT broker\nshared with other IoT projects"]
         PI["Raspberry Pi\nDocker services"]
-        
+
         subgraph PiServices["Running on Pi"]
             direction LR
             PROC["garden-telemetry service\nJSON decode + ingest"]
