@@ -54,6 +54,12 @@ Heltastic V3:
 PeakMesh:
 
    Security / Managed Device: true
+   - LoRa / Region: US  
+   - LoRa / Ok to MQTT: false
+   - Channels:   
+       0. Secret Garden (private encrypted channel)      
+   - Device / Role: Client Mute  
+   - Network / Enabled: false
 
 ## Raspberry Pi Setup
 
@@ -83,7 +89,40 @@ sudo systemctl status garden-telemetry-compose.service
 
 ## Communication - wiring it up
 
+The outdoor sensor node sends data over the private Secret Garden channel to the indoor Heltastic V3, which publishes MQTT messages to the shared broker on the Raspberry Pi. The Pi runs the MQTT broker and the garden-telemetry service, which decodes the JSON payloads and stores the resulting values in local Prometheus for 365 days while also sending them to AWS DynamoDB for long-term retention.
 
+```mermaid
+flowchart LR
+    subgraph Outdoor["Outdoor / WisMesh network"]
+        PM["PeakMesh\nClient Mute"]
+        S1["RAK1901\nTemperature + Humidity"]
+        S2["RAK1902\nBarometric Pressure"]
+        CH["Secret Garden channel"]
+
+        PM --> S1
+        PM --> S2
+        S1 --> CH
+        S2 --> CH
+    end
+
+    subgraph Indoor["Indoor / Raspberry Pi"]
+        HV["Heltastic V3\nWiFi + MQTT uplink"]
+        MQTT["Mosquitto MQTT broker\nshared with other IoT projects"]
+        PI["Raspberry Pi\nDocker services"]
+        PROC["garden-telemetry service\nJSON decode + ingest"]
+        PROM["Prometheus\nlocal time series DB\n365 day retention"]
+        AWS["AWS DynamoDB\nlong-term storage"]
+        GRAF["Grafana dashboard"]
+
+        CH -->|Meshtastic uplink| HV
+        HV -->|publish sensor JSON| MQTT
+        MQTT -->|multiple topics / subscribers| PI
+        PI --> PROC
+        PROC --> PROM
+        PROC --> AWS
+        PROM --> GRAF
+    end
+```
 
 ## Weatherproofing the outside deploy
 
@@ -93,15 +132,37 @@ sudo systemctl status garden-telemetry-compose.service
 ## Troubleshooting
 
 ### Is Mosquitto getting your messages from Meshtastic MQTT
-This will tail the mosquitto logs:
+This will tail the mosquitto logs if you're ssh'd in:
 ```
 docker exec -it mosquitto mosquitto_sub -h localhost -t "#" -v
 ```
 
+### Is the garden-telemetry service processing the messages?
+This will tail the service logs if you're ssh'd in:
+```
+sudo journalctl -u garden-telemetry.service -n 50 --no-pager
+```
+
+### Which processes are running as a service?
+```
+systemctl list-units --type=service
+```
+
+```
+sudo systemctl status garden-telemetry.service
+sudo systemctl status garden-telemetry-compose.service
+```
+
+
 ### Why does 'docker compose ps' show this service restarting?
-This shows the logs:
+This shows the logs for a single service defined in the docker-compose file:
 ```
 docker compose logs grafana --tail=120
+```
+
+This will follow the tail of the docker-compose service:
+```
+sudo journalctl -f -u garden-telemetry-compose.service
 ```
 
 ### Are the messages being saved in Prometheus
