@@ -92,8 +92,9 @@ sudo systemctl status garden-telemetry-compose.service
 The outdoor sensor node sends data over the private Secret Garden channel to the indoor Heltastic V3, which publishes MQTT messages to the shared broker on the Raspberry Pi. The Pi runs the MQTT broker and the garden-telemetry service, which decodes the JSON payloads and stores the resulting values in local Prometheus for 365 days while also sending them to AWS DynamoDB for long-term retention.
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph Outdoor["Outdoor / WisMesh network"]
+        direction LR
         PM["PeakMesh\nClient Mute"]
         S1["RAK1901\nTemperature + Humidity"]
         S2["RAK1902\nBarometric Pressure"]
@@ -106,36 +107,27 @@ flowchart LR
     end
 
     subgraph Indoor["Indoor / Raspberry Pi"]
-        direction LR
         HV["Heltastic V3\nWiFi + MQTT uplink"]
         MQTT["Mosquitto MQTT broker\nshared with other IoT projects"]
         PI["Raspberry Pi\nDocker services"]
-        PROC["garden-telemetry service\nJSON decode + ingest"]
-        PROM["Prometheus\nlocal time series DB\n365 day retention"]
-        AWS["AWS DynamoDB\nlong-term storage"]
-        GRAF["Grafana dashboard"]
+        subgraph PiServices["Running on Pi"]
+            direction LR
+            PROC["garden-telemetry service\nJSON decode + ingest"]
+            PROM["Prometheus\nlocal time series DB\n365 day retention"]
+            AWS["AWS DynamoDB\nlong-term storage"]
+            GRAF["Grafana dashboard"]
 
-        CH --> subgraphA
-        subgraphA --> HV
-        HV --> subgraphB
-        subgraphB --> MQTT
-        MQTT --> subgraphC
-        subgraphC --> PI
+            PROC --> PROM
+            PROC --> AWS
+            PROM --> GRAF
+        end
+
+        CH -->|Meshtastic uplink| HV
+        HV -->|publish sensor JSON| MQTT
+        MQTT -->|multiple topics / subscribers| PI
         PI --> PROC
-        PROC --> PROM
-        PROC --> AWS
-        PROM --> GRAF
+
     end
-
-    subgraphA["Meshtastic uplink"]
-    subgraphB["publish sensor JSON"]
-    subgraphC["multiple topics / subscribers"]
-
-    subgraphA --- subgraphB
-    subgraphB --- subgraphC
-    style subgraphA fill:#f7f7f7,stroke:#999,stroke-width:1px
-    style subgraphB fill:#f7f7f7,stroke:#999,stroke-width:1px
-    style subgraphC fill:#f7f7f7,stroke:#999,stroke-width:1px
 ```
 
 ## Weatherproofing the outside deploy
