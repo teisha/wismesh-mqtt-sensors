@@ -65,11 +65,10 @@ PeakMesh:
 
 
 
-This was all my first time working with Raspberry Pi - so these are all bot first-pass code and I'm going to work on cleaning it up.
-
-Just testing it to see if it works:
+This was my first time working with Raspberry Pi, so I wanted
+to test things and see if it worked:
 ```
-nohup python3 bridge.py > bridge.log 2>&1 &
+nohup python3 mqtt-processor/src/app.py > app.log 2>&1 &
 ```
 
 Next natural step - move it to a service:
@@ -140,7 +139,7 @@ flowchart TB
 
 ## Weatherproofing the outside deploy
 
-
+...Still working on this. 😊
 
 
 ## Troubleshooting
