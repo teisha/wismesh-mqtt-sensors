@@ -12,11 +12,10 @@ MQTT-to-metrics bridge for WisMesh telemetry.
 - `requirements.txt`: runtime dependencies for deployment.
 - `requirements-dev.txt`: local development/testing dependencies.
 - `pytest.ini`: pytest discovery/config.
-- `scripts/deploy.sh`: local deploy to system-level systemd service.
-- `scripts/deploy_remote.sh`: rsync to Pi and invoke remote deploy script.
-- `scripts/update_app.sh`: pull latest code, refresh deps, restart service.
-- `systemd/garden-telemetry.service`: service template used by deploy script.
+- `scripts/deploy_template.sh`: AWS CloudFormation deploy helper for the infrastructure stack.
+- `systemd/garden-telemetry.service`: systemd template for the Python MQTT bridge.
 - `systemd/garden-telemetry-compose.service`: systemd template for the Docker Compose stack.
+- `ansible/`: preferred deployment path for remote provisioning and service startup.
 
 ## Execution Flow
 
@@ -50,26 +49,21 @@ python src/app.py
 ```
 
 ## Deployment
-First make sure that the template is working:
+
+The supported deployment path is Ansible.
+
+```bash
+cd /home/teisha/git/wismesh-mqtt-sensors
+ansible-playbook -i ansible/inventory.ini ansible/deploy_compose.yml
+ansible-playbook -i ansible/inventory.ini ansible/deploy_garden_telemetry.yml
 ```
+
+The CloudFormation template is still available separately for AWS infrastructure provisioning:
+
+```bash
 cd mqtt-processor
 ./scripts/deploy_template.sh --stack-name garden-telemetry-dev --region us-east-1 --stage dev
 ```
-
-
-Local deploy on target machine:
-
-```bash
-bash scripts/deploy.sh
-```
-
-Remote deploy from laptop/workstation:
-
-```bash
-bash scripts/deploy_remote.sh user@pi-host
-```
-
-That deploy path installs the Python app service and also renders/installs the Docker Compose boot unit from `systemd/garden-telemetry-compose.service`, so the container stack comes back after reboot or power loss.
 
 Environment file setup (recommended):
 
@@ -83,17 +77,7 @@ PROMETHEUS_PORT=8000
 EOF
 ```
 
-`scripts/deploy_remote.sh` checks for `config/garden-telemetry.env` and, if present, copies it to `~/.config/garden-telemetry.env` on the remote host. Deploy then installs it to `/etc/default/garden-telemetry`, which is read by the system service.
-
-`scripts/deploy_grafana_remote.sh` is for updating the compose stack in place on the remote host. It syncs the Grafana and telemetry files, then restarts the existing compose systemd service instead of creating a new one.
-
 This config file is intentionally git-ignored and should not be committed.
-
-Update in place on target machine:
-
-```bash
-bash scripts/update_app.sh
-```
 
 ## Service Path Adjustment
 
@@ -114,15 +98,15 @@ sudo systemctl daemon-reload
 sudo systemctl restart garden-telemetry.service
 ```
 
-The deploy script already templates this path from:
+The Ansible playbook templates this path from:
 
-- `scripts/deploy.sh` replacing `{{APP_PY}}`.
+- `systemd/garden-telemetry.service` with `APP_PY` set to the installed Python service entry point.
 
 ## Compose Service Adjustment
 
-The Docker Compose stack is managed by `garden-telemetry-compose.service`, rendered from `systemd/garden-telemetry-compose.service` during `scripts/deploy_remote.sh`.
+The Docker Compose stack is managed by `garden-telemetry-compose.service`, rendered from `systemd/garden-telemetry-compose.service` during the Ansible compose deployment.
 
-If you change the stack location, update the template and re-run the remote deploy so the installed unit is regenerated.
+If you change the stack location, update the template and re-run the compose deployment so the installed unit is regenerated.
 
 To inspect it on the target host:
 
@@ -146,8 +130,9 @@ cd wismesh-mqtt-sensors
 docker compose up -d grafana
 ```
 
-Deploy compose + telemetry + Grafana files to the Pi and recreate Grafana:
+Deploy the compose stack and app service using Ansible:
 ```
-cd mqtt-processor
-./scripts/deploy_grafana_remote.sh pi@raspberrypi.local
+cd /home/teisha/git/wismesh-mqtt-sensors
+ansible-playbook -i ansible/inventory.ini ansible/deploy_compose.yml
+ansible-playbook -i ansible/inventory.ini ansible/deploy_garden_telemetry.yml
 ```

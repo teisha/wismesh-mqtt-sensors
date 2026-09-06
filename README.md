@@ -19,7 +19,7 @@ Going to try to document this so I know what I put together...
 
 Instead of the Meshtastic starter kit, I found the little [PeakMesh MicroMAG](https://www.etsy.com/listing/4346022155/peakmesh-micromag-smallest-outdoor) solar powered unit with a slot C and slot D for the sensor, so this answered the power question as well as "where am I going to put this node.
 
-The only issue with this starter kit is that the sensors sit on the back, which is facing up towards the solar panel, so I had to buy some extension cables.  I got the whole system set up and feeding my local grafana dashboard, but before I deploy this outside, I need to address the location of the sensors, the extreme Southern humidity and keeping the PCBs dry during flooding rains.   I've investigated that and will describe my weatherproofing solution below
+The only issue with this starter kit is that the sensors sit on the back, which is facing up towards the solar panel, so I had to buy some [RAK19005](https://store.rokland.com/products/rak-sensor-extension-cable-100025-copy) extension cables.  I got the whole system set up and feeding my local grafana dashboard, but before I deploy this outside, I need to address the location of the sensors, the extreme Southern humidity and keeping the PCBs dry during flooding rains.   I've investigated that and will describe my weatherproofing solution below
 
 ## WisMesh Setup
 
@@ -68,13 +68,15 @@ nohup python3 bridge.py > bridge.log 2>&1 &
 
 Next natural step - move it to a service:
 
-Run one end-to-end deploy from laptop:
+Run the Ansible deployment from the laptop/workstation:
 ```
-deploy_remote.sh pi@raspberrypi.local
+ansible-playbook -i ansible/inventory.ini ansible/deploy_compose.yml
+ansible-playbook -i ansible/inventory.ini ansible/deploy_garden_telemetry.yml
 ```
 Verify on Pi:
 ```
 sudo systemctl status garden-telemetry.service
+sudo systemctl status garden-telemetry-compose.service
 ```
 
 

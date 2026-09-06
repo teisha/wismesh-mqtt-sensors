@@ -1,0 +1,80 @@
+---
+- name: Deploy the Python garden telemetry service
+  hosts: pi
+  become: true
+  gather_facts: true
+
+  vars:
+    repo_root: "{{ playbook_dir }}/.."
+    app_dir: "/home/{{ ansible_user }}/mqtt-processor"
+    venv_dir: "{{ app_dir }}/.venv"
+    service_name: "garden-telemetry.service"
+    env_source: "{{ repo_root }}/mqtt-processor/config/garden-telemetry.env"
+    env_target: "/etc/default/garden-telemetry"
+
+  tasks:
+    - name: Ensure the app directory exists
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0755"
+
+    - name: Copy the mqtt-processor project into place
+      ansible.builtin.copy:
+        src: "{{ repo_root }}/mqtt-processor/"
+        dest: "{{ app_dir }}/"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0644"
+        directory_mode: "0755"
+
+    - name: Create the Python virtual environment
+      ansible.builtin.command:
+        cmd: "python3 -m venv {{ venv_dir }}"
+      args:
+        creates: "{{ venv_dir }}/bin/python"
+
+    - name: Install Python requirements
+      ansible.builtin.pip:
+        requirements: "{{ app_dir }}/requirements.txt"
+        executable: "{{ venv_dir }}/bin/pip"
+
+    - name: Check whether the env file exists in the repo
+      ansible.builtin.stat:
+        path: "{{ env_source }}"
+      register: env_file
+
+    - name: Install the environment file for the service
+      ansible.builtin.copy:
+        src: "{{ env_source }}"
+        dest: "{{ env_target }}"
+        owner: root
+        group: root
+        mode: "0644"
+      when: env_file.stat.exists
+
+    - name: Render the service unit from the repo template
+      ansible.builtin.template:
+        src: "{{ repo_root }}/mqtt-processor/systemd/garden-telemetry.service"
+        dest: "/etc/systemd/system/{{ service_name }}"
+        owner: root
+        group: root
+        mode: "0644"
+      vars:
+        APP_DIR: "{{ app_dir }}"
+        VENV_PYTHON: "{{ venv_dir }}/bin/python"
+        APP_PY: "{{ app_dir }}/src/app.py"
+        SERVICE_USER: "{{ ansible_user }}"
+        SERVICE_GROUP: "{{ ansible_user }}"
+
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: Enable and start the garden telemetry service
+      ansible.builtin.systemd:
+        name: "{{ service_name }}"
+        enabled: true
+        state: restarted
