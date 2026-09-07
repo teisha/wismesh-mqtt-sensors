@@ -63,6 +63,18 @@ PeakMesh:
 
 ## Raspberry Pi Setup
 
+I had a Pi 4 to setup
+- Flash the OS (64bit Lite)
+- Add the external stick to the fstab so that I can mount it  
+   - 1.Identify the Drives and UUID. `lsblk -f`  
+   - 2.Format the Drive (Optional - Erases all data):  `sudo mkfs.ext4 /dev/sda1`  
+   - 3.Create the Mount Point: `sudo mkdir -p /mnt/storage`  
+   - 4.Configure /etc/fstab for Auto-Mounting:   
+   ```
+     sudo nano /etc/fstab
+     PlaintextUUID=YOUR-UUID-HERE  /mnt/storage  ext4  defaults,noatime,nofail  0  2
+   ```
+   - 5.Test and Mount the Drive: `sudo mount -a`  
 
 
 This was my first time working with Raspberry Pi, so I wanted
@@ -82,6 +94,61 @@ Verify on Pi:
 ```
 sudo systemctl status garden-telemetry.service
 sudo systemctl status garden-telemetry-compose.service
+```
+
+### Optional tools website module (TypeScript frontend + backend)
+
+This repo now includes a separate TypeScript module for web tools:
+
+- `tools_website/api/` - backend API with login and protected publish endpoints
+- `tools_website/ui/` - React web UI for tools (MQTT publisher is the first feature)
+
+The compose stack deploys both modules through `ansible/deploy_compose.yml`.
+
+Configure local login/API settings before deploy:
+
+```
+vi tools_website/api/config/tools-website.env
+```
+
+Then run:
+
+```
+ansible-playbook -i ansible/inventory.ini ansible/deploy_compose.yml
+```
+
+After deployment, open the UI on your LAN:
+
+```
+http://<pi-ip>:8088
+```
+
+The tools API SQLite DB is persisted on the Pi at:
+
+```
+/mnt/storage/tools_api_data/tools-website.db
+```
+
+Nightly backup (latest only):
+
+```
+/mnt/storage/tools_api_backups/tools-website-latest.db
+```
+
+For local Docker workflows from the repo root, use:
+
+```
+./tools_web.sh build
+./tools_web.sh up
+./tools_web.sh down
+./tools_web.sh tdr
+```
+
+Target one service instead of both:
+
+```
+./tools_web.sh build api
+./tools_web.sh build web
 ```
 
 

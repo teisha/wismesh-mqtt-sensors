@@ -1,5 +1,5 @@
 ---
-- name: Deploy the telemetry Docker Compose stack
+- name: Deploy only tools website stack and DB backup setup
   hosts: pi
   become: true
   gather_facts: true
@@ -7,7 +7,6 @@
   vars:
     repo_root: "{{ playbook_dir }}/.."
     remote_stack_dir: "/home/{{ ansible_user }}/telemetry"
-    compose_service_name: "garden-telemetry-compose.service"
 
   tasks:
     - name: Ensure remote stack directory exists
@@ -18,7 +17,7 @@
         group: "{{ ansible_user }}"
         mode: "0755"
 
-    - name: Ensure compose data directories exist on mounted storage
+    - name: Ensure tools website DB and backup directories exist on mounted storage
       ansible.builtin.file:
         path: "{{ item.path }}"
         state: directory
@@ -26,8 +25,6 @@
         group: "{{ item.group }}"
         mode: "{{ item.mode }}"
       loop:
-        - { path: "/mnt/storage/grafana_data", owner: "472", group: "472", mode: "0775" }
-        - { path: "/mnt/storage/prometheus_data", owner: "65534", group: "65534", mode: "0775" }
         - { path: "/mnt/storage/tools_api_data", owner: "{{ ansible_user }}", group: "{{ ansible_user }}", mode: "0775" }
         - { path: "/mnt/storage/tools_api_backups", owner: "{{ ansible_user }}", group: "{{ ansible_user }}", mode: "0775" }
 
@@ -38,33 +35,6 @@
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
         mode: "0644"
-
-    - name: Copy telemetry config directory
-      ansible.builtin.copy:
-        src: "{{ repo_root }}/telemetry/"
-        dest: "{{ remote_stack_dir }}/telemetry/"
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
-        mode: "0644"
-        directory_mode: "0755"
-
-    - name: Copy Grafana provisioning files
-      ansible.builtin.copy:
-        src: "{{ repo_root }}/grafana/provisioning/"
-        dest: "{{ remote_stack_dir }}/grafana/provisioning/"
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
-        mode: "0644"
-        directory_mode: "0755"
-
-    - name: Copy Grafana dashboard files
-      ansible.builtin.copy:
-        src: "{{ repo_root }}/grafana/dashboards/"
-        dest: "{{ remote_stack_dir }}/grafana/dashboards/"
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
-        mode: "0644"
-        directory_mode: "0755"
 
     - name: Copy tools_website module files
       ansible.builtin.copy:
@@ -90,24 +60,7 @@
         hour: "2"
         job: "{{ remote_stack_dir }}/tools_website/scripts/backup_tools_db.sh >> /home/{{ ansible_user }}/telemetry/tools_website/backup.log 2>&1"
 
-    - name: Render the compose systemd unit from the repo template
-      ansible.builtin.template:
-        src: "{{ repo_root }}/mqtt-processor/systemd/garden-telemetry-compose.service"
-        dest: "/etc/systemd/system/{{ compose_service_name }}"
-        owner: root
-        group: root
-        mode: "0644"
-      vars:
-        STACK_DIR: "{{ remote_stack_dir }}"
-        SERVICE_USER: "{{ ansible_user }}"
-        SERVICE_GROUP: "{{ ansible_user }}"
-
-    - name: Reload systemd
-      ansible.builtin.systemd:
-        daemon_reload: true
-
-    - name: Enable and start the Docker Compose stack service
-      ansible.builtin.systemd:
-        name: "{{ compose_service_name }}"
-        enabled: true
-        state: restarted
+    - name: Build and start only tools website services
+      ansible.builtin.command:
+        cmd: docker compose -f docker-compose.yaml up -d --build --no-deps tools-api tools-ui
+        chdir: "{{ remote_stack_dir }}"

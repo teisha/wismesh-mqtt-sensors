@@ -9,3 +9,6 @@ awscliv2.zip
 **/*.env
 mqtt-processor/config/garden-telemetry.env
 mqtt-processor/config/**
+
+**/node_modules/
+**/dist/

@@ -29,6 +29,7 @@
         group: "{{ ansible_user }}"
         mode: "0644"
         directory_mode: "0755"
+      notify: Restart garden telemetry service
 
     - name: Create the Python virtual environment
       ansible.builtin.command:
@@ -40,6 +41,7 @@
       ansible.builtin.pip:
         requirements: "{{ app_dir }}/requirements.txt"
         executable: "{{ venv_dir }}/bin/pip"
+      notify: Restart garden telemetry service
 
     - name: Check whether the env file exists in the repo
       ansible.builtin.stat:
@@ -54,6 +56,7 @@
         group: root
         mode: "0644"
       when: env_file.stat.exists
+      notify: Restart garden telemetry service
 
     - name: Render the service unit from the repo template
       ansible.builtin.template:
@@ -68,13 +71,22 @@
         APP_PY: "{{ app_dir }}/src/app.py"
         SERVICE_USER: "{{ ansible_user }}"
         SERVICE_GROUP: "{{ ansible_user }}"
+      notify:
+        - Reload systemd daemon
+        - Restart garden telemetry service
 
-    - name: Reload systemd
-      ansible.builtin.systemd:
-        daemon_reload: true
-
-    - name: Enable and start the garden telemetry service
+    - name: Ensure the garden telemetry service is enabled and started
       ansible.builtin.systemd:
         name: "{{ service_name }}"
         enabled: true
+        state: started
+
+  handlers:
+    - name: Reload systemd daemon
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: Restart garden telemetry service
+      ansible.builtin.systemd:
+        name: "{{ service_name }}"
         state: restarted

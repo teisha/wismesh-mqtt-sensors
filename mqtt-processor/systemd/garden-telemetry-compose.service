@@ -16,8 +16,10 @@ WorkingDirectory={{STACK_DIR}}
 ExecStartPre=/usr/bin/bash -c 'for i in $(seq 1 45); do mountpoint -q /mnt/storage && exit 0; sleep 2; done; echo "Timed out waiting for /mnt/storage mount" >&2; exit 1'
 ExecStartPre=+/usr/bin/install -d -m 0775 -o 472 -g 472 /mnt/storage/grafana_data
 ExecStartPre=+/usr/bin/install -d -m 0775 -o 65534 -g 65534 /mnt/storage/prometheus_data
+ExecStartPre=+/usr/bin/install -d -m 0775 -o {{SERVICE_USER}} -g {{SERVICE_GROUP}} /mnt/storage/tools_api_data
+ExecStartPre=+/usr/bin/install -d -m 0775 -o {{SERVICE_USER}} -g {{SERVICE_GROUP}} /mnt/storage/tools_api_backups
 ExecStart=/usr/bin/docker compose -f {{STACK_DIR}}/docker-compose.yaml --project-directory {{STACK_DIR}} up -d
-ExecStop=/usr/bin/docker compose -f {{STACK_DIR}}/docker-compose.yaml --project-directory {{STACK_DIR}} down
+ExecStop=/usr/bin/docker compose -f {{STACK_DIR}}/docker-compose.yaml --project-directory {{STACK_DIR}} stop
 TimeoutStartSec=0
 
 [Install]
