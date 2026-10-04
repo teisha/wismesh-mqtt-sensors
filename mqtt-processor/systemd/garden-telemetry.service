@@ -5,13 +5,11 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User={{SERVICE_USER}}
-Group={{SERVICE_GROUP}}
 WorkingDirectory={{APP_DIR}}
-EnvironmentFile=-/etc/default/garden-telemetry
+EnvironmentFile=-{{ENV_FILE}}
 ExecStart={{VENV_PYTHON}} {{APP_PY}}
 Restart=always
 RestartSec=5
 
 [Install]
-WantedBy=multi-user.target
+WantedBy={{SERVICE_WANTED_BY}}

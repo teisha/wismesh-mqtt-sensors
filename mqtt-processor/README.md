@@ -72,12 +72,18 @@ mkdir -p config
 cat > config/garden-telemetry.env <<'EOF'
 MQTT_BROKER=localhost
 MQTT_PORT=1883
-MQTT_TOPIC=msh/+/json/#
+GARDEN_MQTT_TOPIC=msh/+/json/#
+HOUSE_MQTT_TOPIC=house/#
 PROMETHEUS_PORT=8000
+AWS_REGION=us-east-1
+AWS_DYNAMODB_TABLE=garden-telemetry-dev-GardenTelemetryTable-1NR3F4PLDV6LE
+SPEAKER_LOGGING_TABLE_NAME=SpeakerLogTable
 EOF
 ```
 
 This config file is intentionally git-ignored and should not be committed.
+
+The deployment path installs it into `/etc/default/garden-telemetry` via the Ansible playbook in [ansible/deploy_garden_telemetry.yml](ansible/deploy_garden_telemetry.yml), and the systemd unit in [mqtt-processor/systemd/garden-telemetry.service](mqtt-processor/systemd/garden-telemetry.service) loads it with `EnvironmentFile=-/etc/default/garden-telemetry`.
 
 ## Service Path Adjustment
 

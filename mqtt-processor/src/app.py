@@ -1,92 +1,59 @@
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 import paho.mqtt.client as mqtt
-from prometheus_client import start_http_server, Gauge
-from payload_parser import parse_telemetry_message
-from services.dynamodb import get_dynamodb_table
-from utils.logger import setup_logger
+from prometheus_client import start_http_server
+
+try:
+    from src.handlers.garden_telemetry import handle_garden_telemetry_message
+    from src.handlers.speaker_log import handle_speaker_log_message
+    from src.services.dynamodb import get_dynamodb_table
+    from src.utils.logger import setup_logger
+except ModuleNotFoundError:  # pragma: no cover - fallback for script execution
+    from handlers.garden_telemetry import handle_garden_telemetry_message
+    from handlers.speaker_log import handle_speaker_log_message
+    from services.dynamodb import get_dynamodb_table
+    from utils.logger import setup_logger
 
 # Load configuration values from local secure memory environment
 load_dotenv()
 
 MQTT_BROKER = os.getenv("MQTT_BROKER", "localhost")
 MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
-MQTT_TOPIC = os.getenv("MQTT_TOPIC", "msh/+/json/#")
+GARDEN_MQTT_TOPIC = os.getenv("GARDEN_MQTT_TOPIC", os.getenv("MQTT_TOPIC", "msh/+/json/#"))
+HOUSE_MQTT_TOPIC = os.getenv("HOUSE_MQTT_TOPIC", "house/#")
 PROMETHEUS_PORT = int(os.getenv("PROMETHEUS_PORT", 8000))
 logger = setup_logger()
 db_table = get_dynamodb_table(logger)
 
-# Initialize Prometheus Gauges with custom multi-node labels
-LABELS = ["sender", "channel"]
-temp_gauge = Gauge("garden_temperature_celsius", "Temperature in degrees Celsius", LABELS)
-humidity_gauge = Gauge("garden_humidity_percent", "Relative humidity percentage", LABELS)
-pressure_gauge = Gauge("garden_pressure_hpa", "Barometric pressure in hPa", LABELS)
-iaq_gauge = Gauge("garden_iaq_score", "Indoor Air Quality index rating", LABELS)
-gas_gauge = Gauge("garden_gas_resistance_kohm", "Gas resistance value from sensor", LABELS)
-lux_gauge = Gauge("garden_light_lux", "Ambient light reading in Lux", LABELS)
-
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
         logger.info("Connected to Mosquitto broker at %s", MQTT_BROKER)
-        client.subscribe(MQTT_TOPIC)
+        subscriptions = [GARDEN_MQTT_TOPIC, HOUSE_MQTT_TOPIC]
+        for topic in subscriptions:
+            client.subscribe(topic)
+            logger.info("Subscribed to MQTT topic: %s", topic)
     else:
         logger.error("Connection failed with error code: %s", rc)
 
+
 def on_message(client, userdata, msg):
+    payload = msg.payload.decode("utf-8")
+    topic = msg.topic
+
     try:
-        payload_data = json.loads(msg.payload.decode("utf-8"))
+        if topic.startswith("house/"):
+            handle_speaker_log_message(logger, topic, payload)
+            return
 
-        parsed_message = parse_telemetry_message(payload_data)
-        if parsed_message:
-            sender, channel, telemetry = parsed_message
-            
-            # --- PIPELINE 1: Expose local metrics to Prometheus ---
-            if "temperature" in telemetry:
-                temp_gauge.labels(sender=sender, channel=channel).set(telemetry["temperature"])
-            if "relative_humidity" in telemetry:
-                humidity_gauge.labels(sender=sender, channel=channel).set(telemetry["relative_humidity"])
-            if "barometric_pressure" in telemetry:
-                pressure_gauge.labels(sender=sender, channel=channel).set(telemetry["barometric_pressure"])
-            if "iaq" in telemetry:
-                iaq_gauge.labels(sender=sender, channel=channel).set(telemetry["iaq"])
-            if "gas_resistance" in telemetry:
-                gas_gauge.labels(sender=sender, channel=channel).set(telemetry["gas_resistance"])
-            if "lux" in telemetry:
-                lux_gauge.labels(sender=sender, channel=channel).set(telemetry["lux"])
-                
-            logger.info("Local metrics exposed for sender=%s channel=%s", sender, channel)
-            
-            # --- PIPELINE 2: Stream copy directly to AWS DynamoDB NoSQL Cloud ---
-            if db_table:
-                # Generate a clean, human-readable ISO timestamp string for the Sort Key
-                timestamp_iso = datetime.utcnow().isoformat() + "Z"
-                
-                # Format raw numbers cleanly into string format or floats for NoSQL absorption
-                db_item = {
-                    "PK": f"NODE#{sender}",                # Partition Key (String)
-                    "SK": f"TS#{timestamp_iso}",           # Sort Key (String)
-                    "search_attribute": f"CHANNEL#{channel}",
-                    "node_id": sender,
-                    "timestamp": timestamp_iso,
-                    "channel_index": channel,
-                    "temperature": str(telemetry.get("temperature")),
-                    "humidity": str(telemetry.get("relative_humidity")),
-                    "pressure": str(telemetry.get("barometric_pressure")),
-                    "iaq": int(telemetry.get("iaq", 0)),
-                    "gas_res": str(telemetry.get("gas_resistance", 0)),
-                    "lux": int(telemetry.get("lux", 0))
-                }
-                
-                try:
-                    db_table.put_item(Item=db_item)
-                    logger.info("AWS Cloud record saved successfully to DynamoDB")
-                except Exception as aws_err:
-                    logger.warning("AWS write timeout/failure: %s", aws_err)
+        if topic.startswith("msh/") or topic == GARDEN_MQTT_TOPIC:
+            handle_garden_telemetry_message(logger, payload, db_table)
+            return
 
-    except Exception as e:
-        logger.warning("Error parsing incoming packet stream: %s", e)
+        logger.debug("Ignoring unhandled MQTT topic: %s", topic)
+    except Exception as exc:
+        logger.warning("Error handling incoming packet stream on topic=%s: %s", topic, exc)
 
 def main():
     start_http_server(PROMETHEUS_PORT)
