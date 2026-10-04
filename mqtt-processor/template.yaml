@@ -93,40 +93,76 @@ Resources:
       ManagedPolicyArns:
         - !Ref RaspberryPiBridgeManagedPolicy
 
-  # OutputTable:
-  #   Type: AWS::DynamoDB::Table
-  #   Properties:
-  #     # DeletionPolicy: Retain
-  #     AttributeDefinitions:
-  #       - AttributeName: PK
-  #         AttributeType: S
-  #       - AttributeName: SK
-  #         AttributeType: S
-  #       - AttributeName: search_attribute
-  #         AttributeType: S
-  #     KeySchema:
-  #       - AttributeName: PK
-  #         KeyType: HASH
-  #       - AttributeName: SK
-  #         KeyType: RANGE
-  #     BillingMode: PAY_PER_REQUEST
-  #     GlobalSecondaryIndexes:
-  #       - IndexName: GSI1
-  #         KeySchema:
-  #           - AttributeName: SK
-  #             KeyType: HASH
-  #           - AttributeName: PK
-  #             KeyType: RANGE
-  #         Projection:
-  #           ProjectionType: ALL
-  #       - IndexName: SearchIndex
-  #         KeySchema:
-  #           - AttributeName: search_attribute
-  #             KeyType: HASH
-  #           - AttributeName: PK
-  #             KeyType: RANGE
-  #         Projection:
-  #           ProjectionType: ALL
+  SpeakerTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      # DeletionPolicy: Retain
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: search_attribute
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: SK
+              KeyType: HASH
+            - AttributeName: PK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: SearchIndex
+          KeySchema:
+            - AttributeName: search_attribute
+              KeyType: HASH
+            - AttributeName: PK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+
+  SpeakerLogTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      # DeletionPolicy: Retain
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: search_attribute
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: SK
+              KeyType: HASH
+            - AttributeName: PK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: SearchIndex
+          KeySchema:
+            - AttributeName: search_attribute
+              KeyType: HASH
+            - AttributeName: PK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL            
 
   LambdaExecutionRole:
     Type: AWS::IAM::Role
@@ -178,8 +214,11 @@ Resources:
                 Resource: 
                   - !GetAtt GardenTelemetryTable.Arn
                   - !Sub ${GardenTelemetryTable.Arn}/*
-                  # - !GetAtt OutputTable.Arn
-                  # - !Sub ${OutputTable.Arn}/*                
+                  - !GetAtt SpeakerTable.Arn
+                  - !Sub ${SpeakerTable.Arn}/*    
+                  - !GetAtt SpeakerLogTable.Arn
+                  - !Sub ${SpeakerLogTable.Arn}/*    
+
 
   # LambdaFunction:
   #   Type: AWS::Serverless::Function
@@ -227,9 +266,12 @@ Outputs:
   GardenTelemetryTableName:
     Description: The name of the DynamoDB table that holds metadata and configs
     Value: !Ref GardenTelemetryTable
-  # OutputTableName:
-  #   Description: The name of the DynamoDB table that holds data related to job outputs
-  #   Value: !Ref OutputTable    
+  SpeakerTableName:
+    Description: The name of the DynamoDB table that holds data related to speaker messages
+    Value: !Ref SpeakerTable    
+  SpeakerLogTableName:
+    Description: The name of the DynamoDB table that holds data related to speaker messages
+    Value: !Ref SpeakerLogTable    
   LambdaExecutionRoleArn:
     Description: The ARN of the Lambda execution role
     Value: !GetAtt LambdaExecutionRole.Arn
