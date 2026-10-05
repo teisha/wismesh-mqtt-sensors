@@ -27,31 +27,42 @@ PROMETHEUS_PORT = int(os.getenv("PROMETHEUS_PORT", 8000))
 logger = setup_logger()
 db_table = get_dynamodb_table(logger)
 
-def on_connect(client, userdata, flags, rc):
-    if rc == 0:
+def on_connect(client, userdata, flags, reason_code, properties):
+    if reason_code == 0:
         logger.info("Connected to Mosquitto broker at %s", MQTT_BROKER)
         subscriptions = [GARDEN_MQTT_TOPIC, HOUSE_MQTT_TOPIC]
         for topic in subscriptions:
             client.subscribe(topic)
             logger.info("Subscribed to MQTT topic: %s", topic)
     else:
-        logger.error("Connection failed with error code: %s", rc)
+        logger.error("Connection failed with error code: %s", reason_code)
 
 
 def on_message(client, userdata, msg):
-    payload = msg.payload.decode("utf-8")
     topic = msg.topic
 
     try:
-        if topic.startswith("house/"):
+        logger.info("Inbound MQTT message topic=%s bytes=%s", topic, len(msg.payload))
+
+        try:
+            payload = msg.payload.decode("utf-8")
+        except UnicodeDecodeError:
+            payload = msg.payload.decode("utf-8", errors="replace")
+            logger.warning("Non-UTF8 MQTT payload received on topic=%s; undecodable bytes were replaced", topic)
+
+        lower_topic = topic.lower()
+
+        if topic.startswith("house/") or "moode" in lower_topic or "speaker" in lower_topic:
+            logger.info("Received house MQTT message on topic=%s", topic)
             handle_speaker_log_message(logger, topic, payload)
             return
 
         if topic.startswith("msh/") or topic == GARDEN_MQTT_TOPIC:
+            logger.debug("Received garden MQTT message on topic=%s", topic)
             handle_garden_telemetry_message(logger, payload, db_table)
             return
 
-        logger.debug("Ignoring unhandled MQTT topic: %s", topic)
+        logger.info("Ignoring unhandled MQTT topic: %s", topic)
     except Exception as exc:
         logger.warning("Error handling incoming packet stream on topic=%s: %s", topic, exc)
 
@@ -59,7 +70,7 @@ def main():
     start_http_server(PROMETHEUS_PORT)
     logger.info("Prometheus web metrics server running on port %s", PROMETHEUS_PORT)
 
-    client = mqtt.Client()
+    client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
     client.on_connect = on_connect
     client.on_message = on_message
 

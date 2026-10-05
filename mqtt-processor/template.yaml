@@ -78,6 +78,10 @@ Resources:
             Resource:
               - !GetAtt GardenTelemetryTable.Arn
               - !Sub ${GardenTelemetryTable.Arn}/index/*
+              - !GetAtt SpeakerTable.Arn
+              - !Sub ${SpeakerTable.Arn}/index/*
+              - !GetAtt SpeakerLogTable.Arn
+              - !Sub ${SpeakerLogTable.Arn}/index/*
 
   RaspberryPiBridgeRole:
     Type: AWS::IAM::Role

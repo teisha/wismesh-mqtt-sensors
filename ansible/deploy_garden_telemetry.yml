@@ -4,15 +4,21 @@
   become: false
   gather_facts: true
 
+  vars_prompt:
+    - name: ansible_single_password
+      prompt: "SSH/sudo password"
+      private: true
+
   vars:
     repo_root: "{{ playbook_dir }}/.."
     app_dir: "/home/{{ ansible_user }}/mqtt-processor"
     app_parent_dir: "/home/{{ ansible_user }}"
     venv_dir: "{{ app_dir }}/.venv"
-    systemd_user_dir: "/home/{{ ansible_user }}/.config/systemd/user"
     service_name: "garden-telemetry.service"
     local_bundle: "/tmp/mqtt-processor-deploy.tar.gz"
     remote_bundle: "/tmp/mqtt-processor-deploy.tar.gz"
+    ansible_ssh_pass: "{{ ansible_single_password }}"
+    ansible_become_pass: "{{ ansible_single_password }}"
 
   tasks:
     - name: Ensure the app directory exists
@@ -54,7 +60,8 @@
         remote_src: true
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
-      notify: Restart garden telemetry service
+      notify:
+        - Restart garden telemetry service
 
     - name: Remove deployment archive from target host
       ansible.builtin.file:
@@ -76,54 +83,45 @@
     - name: Install Python requirements
       ansible.builtin.command:
         cmd: "{{ venv_dir }}/bin/pip install -r {{ app_dir }}/requirements.txt"
-      notify: Restart garden telemetry service
-
-    - name: Ensure the user systemd directory exists
-      ansible.builtin.file:
-        path: "{{ systemd_user_dir }}"
-        state: directory
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
-        mode: "0755"
+      notify:
+        - Restart garden telemetry service
 
     - name: Render the service unit from the repo template
+      become: true
       ansible.builtin.template:
         src: "{{ repo_root }}/mqtt-processor/systemd/garden-telemetry.service"
-        dest: "{{ systemd_user_dir }}/{{ service_name }}"
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
+        dest: "/etc/systemd/system/{{ service_name }}"
+        owner: root
+        group: root
         mode: "0644"
       vars:
         APP_DIR: "{{ app_dir }}"
         VENV_PYTHON: "{{ venv_dir }}/bin/python"
         APP_PY: "{{ app_dir }}/src/app.py"
+        SERVICE_USER: "{{ ansible_user }}"
+        SERVICE_GROUP: "{{ ansible_user }}"
         ENV_FILE: "{{ app_dir }}/config/garden-telemetry.env"
-        SERVICE_WANTED_BY: "default.target"
+        SERVICE_WANTED_BY: "multi-user.target"
       notify:
         - Reload systemd daemon
         - Restart garden telemetry service
 
     - name: Ensure the garden telemetry service is enabled and started
+      become: true
       ansible.builtin.systemd:
         name: "{{ service_name }}"
-        scope: user
         enabled: true
         state: started
-      environment:
-        XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
 
   handlers:
     - name: Reload systemd daemon
+      become: true
       ansible.builtin.systemd:
-        scope: user
         daemon_reload: true
-      environment:
-        XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
 
     - name: Restart garden telemetry service
+      become: true
       ansible.builtin.systemd:
         name: "{{ service_name }}"
-        scope: user
         state: restarted
-      environment:
-        XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+
