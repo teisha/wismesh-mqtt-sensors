@@ -1,5 +1,7 @@
 import json
+from types import SimpleNamespace
 
+from src import app as app_module
 from src.handlers.garden_telemetry import handle_garden_telemetry_message
 from src.payload_parser import parse_telemetry_message
 
@@ -57,3 +59,22 @@ def test_handle_garden_telemetry_message_reuses_metrics_registry():
 
     for _ in range(2):
         handle_garden_telemetry_message(DummyLogger(), json.dumps(payload_data), None)
+
+
+def test_on_message_routes_secret_garden_legacy_topic(monkeypatch):
+    called = {"value": False}
+
+    def fake_handler(logger, payload, db_table):
+        called["value"] = True
+
+    monkeypatch.setattr(app_module, "handle_garden_telemetry_message", fake_handler)
+    monkeypatch.setattr(app_module, "db_table", None)
+
+    message = SimpleNamespace(
+        topic="msh/2/e/SecretGardn/!02ec1d54",
+        payload=b"\xff\xfe\x00\x01",
+    )
+
+    app_module.on_message(None, None, message)
+
+    assert called["value"] is True

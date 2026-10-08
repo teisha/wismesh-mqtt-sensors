@@ -27,6 +27,20 @@ PROMETHEUS_PORT = int(os.getenv("PROMETHEUS_PORT", 8000))
 logger = setup_logger()
 db_table = get_dynamodb_table(logger)
 
+
+def is_garden_topic(topic: str) -> bool:
+    lower_topic = topic.lower()
+    return (
+        topic.startswith("msh/")
+        and (
+            "/json/" in lower_topic
+            or "/e/" in lower_topic
+            or "secretgardn" in lower_topic
+            or topic == GARDEN_MQTT_TOPIC
+        )
+    )
+
+
 def on_connect(client, userdata, flags, reason_code, properties):
     if reason_code == 0:
         logger.info("Connected to Mosquitto broker at %s", MQTT_BROKER)
@@ -57,12 +71,22 @@ def on_message(client, userdata, msg):
             handle_speaker_log_message(logger, topic, payload)
             return
 
-        if topic.startswith("msh/") and ("/json/" in lower_topic or topic == GARDEN_MQTT_TOPIC):
+        if is_garden_topic(topic):
             logger.debug("Received garden MQTT message on topic=%s", topic)
             handle_garden_telemetry_message(logger, payload, db_table)
             return
 
-        logger.info("Ignoring unhandled MQTT topic: %s", topic)
+        if topic.startswith("msh/"):
+            payload_preview = payload[:200] if payload else ""
+            logger.warning(
+                "Ignoring unhandled MQTT topic=%s payload_preview=%r payload_len=%s raw_payload=%r",
+                topic,
+                payload_preview,
+                len(msg.payload),
+                msg.payload,
+            )
+        else:
+            logger.info("Ignoring unhandled MQTT topic: %s", topic)
     except Exception as exc:
         logger.warning("Error handling incoming packet stream on topic=%s: %s", topic, exc)
 
