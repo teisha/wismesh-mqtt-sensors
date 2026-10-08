@@ -24,6 +24,9 @@ def _build_gauges() -> Dict[str, Gauge]:
     }
 
 
+GAUGES = _build_gauges()
+
+
 def handle_garden_telemetry_message(logger: Any, payload: str, db_table: Any) -> None:
     payload_data = json.loads(payload)
     parsed_message = parse_telemetry_message(payload_data)
@@ -32,19 +35,18 @@ def handle_garden_telemetry_message(logger: Any, payload: str, db_table: Any) ->
 
     sender, channel, telemetry = parsed_message
 
-    gauges = _build_gauges()
     if "temperature" in telemetry:
-        gauges["temperature"].labels(sender=sender, channel=channel).set(telemetry["temperature"])
+        GAUGES["temperature"].labels(sender=sender, channel=channel).set(telemetry["temperature"])
     if "relative_humidity" in telemetry:
-        gauges["humidity"].labels(sender=sender, channel=channel).set(telemetry["relative_humidity"])
+        GAUGES["humidity"].labels(sender=sender, channel=channel).set(telemetry["relative_humidity"])
     if "barometric_pressure" in telemetry:
-        gauges["pressure"].labels(sender=sender, channel=channel).set(telemetry["barometric_pressure"])
+        GAUGES["pressure"].labels(sender=sender, channel=channel).set(telemetry["barometric_pressure"])
     if "iaq" in telemetry:
-        gauges["iaq"].labels(sender=sender, channel=channel).set(telemetry["iaq"])
+        GAUGES["iaq"].labels(sender=sender, channel=channel).set(telemetry["iaq"])
     if "gas_resistance" in telemetry:
-        gauges["gas"].labels(sender=sender, channel=channel).set(telemetry["gas_resistance"])
+        GAUGES["gas"].labels(sender=sender, channel=channel).set(telemetry["gas_resistance"])
     if "lux" in telemetry:
-        gauges["lux"].labels(sender=sender, channel=channel).set(telemetry["lux"])
+        GAUGES["lux"].labels(sender=sender, channel=channel).set(telemetry["lux"])
 
     logger.info("Local metrics exposed for sender=%s channel=%s", sender, channel)
 

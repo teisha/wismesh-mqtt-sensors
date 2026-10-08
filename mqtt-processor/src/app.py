@@ -57,7 +57,7 @@ def on_message(client, userdata, msg):
             handle_speaker_log_message(logger, topic, payload)
             return
 
-        if topic.startswith("msh/") or topic == GARDEN_MQTT_TOPIC:
+        if topic.startswith("msh/") and ("/json/" in lower_topic or topic == GARDEN_MQTT_TOPIC):
             logger.debug("Received garden MQTT message on topic=%s", topic)
             handle_garden_telemetry_message(logger, payload, db_table)
             return

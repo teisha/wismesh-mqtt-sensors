@@ -12,3 +12,8 @@ mqtt-processor/config/**
 
 **/node_modules/
 **/dist/
+
+**/cpython**
+__pycache__/
+*.py[cod]
+*.pyo
