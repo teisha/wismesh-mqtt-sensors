@@ -188,8 +188,8 @@ Resources:
                   - s3:GetObject
                   - s3:ListBucket
                 Resource:
-                  - !Sub arn:aws:s3:::2u-import
-                  - !Sub arn:aws:s3:::2u-import/partner/imports/*
+                  - !Sub arn:aws:s3:::lsft-audiobook-manager-qa
+                  - !Sub arn:aws:s3:::lsft-audiobook-manager-qa/uploads/*
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup

@@ -91,7 +91,11 @@ def on_message(client, userdata, msg):
         logger.warning("Error handling incoming packet stream on topic=%s: %s", topic, exc)
 
 def main():
-    start_http_server(PROMETHEUS_PORT)
+    try:
+        start_http_server(PROMETHEUS_PORT)
+        print(f"Prometheus metrics server running on port {PROMETHEUS_PORT}")
+    except OSError:
+        print(f"Port {PROMETHEUS_PORT} in use or socket busy. Proceeding with MQTT loop.")    
     logger.info("Prometheus web metrics server running on port %s", PROMETHEUS_PORT)
 
     client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)

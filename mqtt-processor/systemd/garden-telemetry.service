@@ -7,9 +7,10 @@ Wants=network-online.target
 Type=simple
 WorkingDirectory={{APP_DIR}}
 EnvironmentFile=-{{ENV_FILE}}
+ExecStartPre=/bin/sleep 2
 ExecStart={{VENV_PYTHON}} {{APP_PY}}
 Restart=always
-RestartSec=5
+RestartSec=10
 
 [Install]
 WantedBy={{SERVICE_WANTED_BY}}

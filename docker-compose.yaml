@@ -19,6 +19,7 @@ services:
       # sudo mount /dev/sda2 /mnt/storage
       # sudo mkdir -p /mnt/storage/prometheus_data
       # sudo chown -R 65534:65534 /mnt/storage/prometheus_data
+      # ADD TO FSTAB SO THAT IT PERSISTS ON REBOOT!
       - /mnt/storage/prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -49,7 +50,7 @@ services:
     # rsync -av --progress ~/wismesh-mqtt-sensors/docker-compose.yaml pi@raspberrypi.local:~/telemetry/docker-compose.yaml
 
 
-
+# Moving this to a different stack
   # docker compose build tools-api tools-ui
   # docker compose up -d mosquitto tools-api tools-ui
   # to verify
@@ -57,26 +58,26 @@ services:
   #  docker compose logs -f tools-api
   #  docker compose logs -f tools-ui
 
-  tools-api:
-    build:
-      context: ./tools_website/api
-    container_name: tools-api
-    env_file:
-      - ./tools_website/api/config/tools-website.env
-    environment:
-      MQTT_URL: ${TOOLS_WEBSITE_MQTT_URL:-mqtt://mosquitto:1883}
-    volumes:
-      - /mnt/storage/tools_api_data:/data
-    depends_on:
-      - mosquitto
-    restart: always
+  # tools-api:
+  #   build:
+  #     context: ./tools_website/api
+  #   container_name: tools-api
+  #   env_file:
+  #     - ./tools_website/api/config/tools-website.env
+  #   environment:
+  #     MQTT_URL: ${TOOLS_WEBSITE_MQTT_URL:-mqtt://mosquitto:1883}
+  #   volumes:
+  #     - /mnt/storage/tools_api_data:/data
+  #   depends_on:
+  #     - mosquitto
+  #   restart: always
 
-  tools-ui:
-    build:
-      context: ./tools_website/ui
-    container_name: tools-ui
-    depends_on:
-      - tools-api
-    ports:
-      - "8088:8088"
-    restart: always
+  # tools-ui:
+  #   build:
+  #     context: ./tools_website/ui
+  #   container_name: tools-ui
+  #   depends_on:
+  #     - tools-api
+  #   ports:
+  #     - "8088:8088"
+  #   restart: always
