@@ -78,3 +78,30 @@ def test_on_message_routes_secret_garden_legacy_topic(monkeypatch):
     app_module.on_message(None, None, message)
 
     assert called["value"] is True
+
+
+def test_on_connect_subscribes_only_to_garden_topic(monkeypatch):
+    subscriptions = []
+    monkeypatch.setattr(app_module, "GARDEN_MQTT_TOPIC", "msh/+/json/#")
+
+    class DummyClient:
+        def subscribe(self, topic):
+            subscriptions.append(topic)
+
+    app_module.on_connect(DummyClient(), None, None, 0, None)
+
+    assert subscriptions == ["msh/+/json/#"]
+
+
+def test_on_message_ignores_non_garden_topic(monkeypatch):
+    called = {"value": False}
+
+    def fake_handler(logger, payload, db_table):
+        called["value"] = True
+
+    monkeypatch.setattr(app_module, "handle_garden_telemetry_message", fake_handler)
+
+    message = SimpleNamespace(topic="house/living-room/speaker", payload=b"test")
+    app_module.on_message(None, None, message)
+
+    assert called["value"] is False

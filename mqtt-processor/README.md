@@ -20,7 +20,7 @@ MQTT-to-metrics bridge for WisMesh telemetry.
 ## Execution Flow
 
 1. Service starts Python executable at `src/app.py`.
-2. App subscribes to `msh/+/json/#` (configurable via `MQTT_TOPIC`).
+2. App subscribes only to the garden topic filter (`GARDEN_MQTT_TOPIC`, configurable via `MQTT_TOPIC`).
 3. `on_message` parses JSON and keeps only telemetry payloads.
 4. Metrics are exposed to Prometheus on `PROMETHEUS_PORT`.
 5. Records are optionally written to DynamoDB when configured.
@@ -73,7 +73,6 @@ cat > config/garden-telemetry.env <<'EOF'
 MQTT_BROKER=localhost
 MQTT_PORT=1883
 GARDEN_MQTT_TOPIC=msh/+/json/#
-HOUSE_MQTT_TOPIC=house/#
 PROMETHEUS_PORT=8000
 AWS_REGION=us-east-1
 AWS_DYNAMODB_TABLE=garden-telemetry-dev-GardenTelemetryTable-1NR3F4PLDV6LE
